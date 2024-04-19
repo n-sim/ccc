@@ -6,9 +6,12 @@ import java.nio.file.Path;
 import java.util.*;
 
 public class Solution {
-    static int levelNumber = 1;
-    static boolean runInTestMode = true;
+    static int levelNumber = 2;
+    static boolean runInTestMode = false;
     static int numberOfInputs = 5;
+
+    record Instance(int lawnWidth, int lawnHeight, char[][] lawn, String instructions) {
+    }
 
 
     public static void main(String[] args) throws Exception {
@@ -26,14 +29,19 @@ public class Solution {
     }
 
     public static String solve(String inputString) throws Exception {
+        StringJoiner output = new StringJoiner("\n");
         final String linesDelimiter = "\r\n";
         String[] lines = inputString.split(linesDelimiter);
-
 //        Input Parsing of Maps:
 //        =====================================================================================
-//        var firstLine = parseFirstLine(lines[0]);
-//        List<List<String>> groups = InputGroupConverter.parseLinesToGroups(lines, 2, "");
-//
+        var firstLine = parseFirstLine(lines[0]);
+        List<List<String>> groups = InputGroupConverter.parseLinesToGroups(lines, 1, "");
+        List<String> paths = groups.get(0);
+        
+        for (var path : paths) {
+            output.add(countOcc(path));
+        }
+
 //        List<Character[][]> maps = InputGroupConverter.convertGroupsTo2DimCharArrays(groups);
 //        for (var map : maps) {
 //            System.out.println(Arrays.deepToString(map));
@@ -44,10 +52,54 @@ public class Solution {
 //        }
 
 
-        StringJoiner output = new StringJoiner("\n");
         return output.toString();
     }
 
+    public static String countOcc(String instance) {
+        List<Tuple<Integer, Integer>> pathPositions = new LinkedList<>();
+            Tuple<Integer, Integer> currentPosition = new Tuple<>(0, 0);
+        pathPositions.add(currentPosition);
+
+        // X: nach open
+        for (char c : instance.toCharArray()) {
+            switch (c) {
+                case 'W': currentPosition = new Tuple<>(currentPosition.getX()-1, currentPosition.getY()); pathPositions.add(currentPosition);  break;
+                case 'S': currentPosition = new Tuple<>(currentPosition.getX()+1, currentPosition.getY()); pathPositions.add(currentPosition); break;
+                case 'D': currentPosition = new Tuple<>(currentPosition.getX(), currentPosition.getY() +1); pathPositions.add(currentPosition); break;
+                case 'A': currentPosition = new Tuple<>(currentPosition.getX(), currentPosition.getY()-1); pathPositions.add(currentPosition); break;
+            }
+        }
+        /*
+        pathPositions.stream().mapToInt(Tuple::getX).max();
+        pathPositions.stream().mapToInt(Tuple::getY).max();
+*/
+        int minRow = Integer.MAX_VALUE;
+        int maxRow = Integer.MIN_VALUE;
+        int minCol = Integer.MAX_VALUE;
+        int maxCol = Integer.MIN_VALUE;
+
+        for (var position : pathPositions) {
+            int row = position.getX();
+            int col = position.getY();
+
+            if (row < minRow) {
+                minRow = row;
+            } else if (row > maxRow) {
+                maxRow = row;
+            }
+            if (col < minCol) {
+                minCol = col;
+            } else if (col > maxCol) {
+                maxCol = col;
+            }
+        }
+        int width = Math.abs(minCol) + Math.abs(maxCol) + 1;
+        int height = Math.abs(minRow) + Math.abs(maxRow) + 1;
+
+        return String.valueOf(width) + " " + String.valueOf(height);
+
+
+    }
     public static String parseFirstLine(String firstLine) {
         // TODO: Handle first line
         return firstLine;
