@@ -1,5 +1,6 @@
 package util.list_to_array_converter;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
@@ -35,10 +36,10 @@ public class ListToArrayConverter {
         return convertListOfStringsTo2DimCharArrayByDelimiter(lines, "");
     }
 
-    public static <T> T[][] convertListOfListsTo2DimArray(List<List<T>> listOfList) {
+    public static <T> T[][] convertListOfListsTo2DimArray(List<List<T>> listOfList, Class<T> clazz) {
         int rows = listOfList.size();
         int cols = listOfList.get(0).size();
-        T[][] array = (T[][]) new Object[rows][cols];
+        T[][] array = (T[][]) Array.newInstance(clazz, rows, cols);
 
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
