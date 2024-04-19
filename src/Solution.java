@@ -1,12 +1,15 @@
 import util.Tuple;
 import util.input_group_converter.InputGroupConverter;
+import util.list_to_array_converter.ListToArrayConverter;
+import util.traverse.TraverseUtils;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Solution {
-    static int levelNumber = 2;
+    static int levelNumber = 3;
     static boolean runInTestMode = false;
     static int numberOfInputs = 5;
 
@@ -36,10 +39,11 @@ public class Solution {
 //        =====================================================================================
         var firstLine = parseFirstLine(lines[0]);
         List<List<String>> groups = InputGroupConverter.parseLinesToGroups(lines, 1, "");
-        List<String> paths = groups.get(0);
-        
-        for (var path : paths) {
-            output.add(countOcc(path));
+        List<String> linesWithoutFirstLine = groups.get(0);
+
+        List<Instance> instances = parseInputToInstances(linesWithoutFirstLine);
+        for (Instance instance : instances) {
+            output.add(countOcc(instance));
         }
 
 //        List<Character[][]> maps = InputGroupConverter.convertGroupsTo2DimCharArrays(groups);
@@ -55,9 +59,64 @@ public class Solution {
         return output.toString();
     }
 
-    public static String countOcc(String instance) {
+    public static List<Instance> parseInputToInstances(List<String> linesWitoutTopLine) {
+        List<Instance> instances = new ArrayList<>();
+
+        for (int lineIndex = 0; lineIndex < linesWitoutTopLine.size(); lineIndex++) {
+            List<Integer> widthAndHeight = parseFirstLine(linesWitoutTopLine.get(lineIndex));
+            int width = widthAndHeight.get(0);
+            int height = widthAndHeight.get(1);
+            char[][] lawn = new char[height][width];
+            lineIndex++; //Skip line with height-width-data
+            for (int i = 0; i < height; i++, lineIndex++) {
+                for (int j = 0; j < linesWitoutTopLine.get(lineIndex).length(); j++) {
+                    lawn[i][j] = linesWitoutTopLine.get(lineIndex).charAt(j);
+                }
+            }
+            String lineInstructions = linesWitoutTopLine.get(lineIndex); // wegen forloop lineIndex zum schlus nochmal incrementiert, deshalb davor niht mehr notwendig
+            instances.add(new Instance(width, height, lawn, lineInstructions));
+        }
+
+        return instances;
+    }
+
+    public static String countOcc(Instance instance) {
+        Tuple<Integer, Integer> offset = calcOffset(instance.instructions);
         List<Tuple<Integer, Integer>> pathPositions = new LinkedList<>();
-            Tuple<Integer, Integer> currentPosition = new Tuple<>(0, 0);
+        Tuple<Integer, Integer> currentPosition = new Tuple<>(offset.getX(), offset.getY());
+        pathPositions.add(currentPosition);
+
+        // X: nach open
+        for (char c : instance.instructions.toCharArray()) {
+            Tuple<Integer, Integer> newPosCandiate = null;
+            if (c == 'W') {
+                newPosCandiate = new Tuple<>(currentPosition.getX() - 1, currentPosition.getY());
+            } else if (c == 'S') {
+                newPosCandiate = new Tuple<>(currentPosition.getX() + 1, currentPosition.getY());
+            } else if (c == 'D') {
+                newPosCandiate = new Tuple<>(currentPosition.getX(), currentPosition.getY() + 1);
+            } else if (c == 'A') {
+                newPosCandiate = new Tuple<>(currentPosition.getX(), currentPosition.getY() - 1);
+            } else {
+                throw new IllegalArgumentException("fuck oida");
+            }
+            if (!pathPositions.contains(newPosCandiate) &&
+                    TraverseUtils.isValidPosition(newPosCandiate.getX(), newPosCandiate.getY(),instance.lawn) &&
+                    instance.lawn()[newPosCandiate.getX()][newPosCandiate.getY()] != 'X') {
+                currentPosition = newPosCandiate;
+                pathPositions.add(currentPosition);
+            } else {
+                return "INVALID";
+            }
+        }
+
+        return pathPositions.size() + countOccOfCharacterInMap(instance.lawn, 'X') == (instance.lawnHeight * instance.lawnWidth) ?
+                "VALID" : "INVALID";
+    }
+
+    public static Tuple<Integer, Integer> calcOffset(String instance) {
+        List<Tuple<Integer, Integer>> pathPositions = new LinkedList<>();
+        Tuple<Integer, Integer> currentPosition = new Tuple<>(0, 0);
         pathPositions.add(currentPosition);
 
         // X: nach open
@@ -93,29 +152,39 @@ public class Solution {
                 maxCol = col;
             }
         }
-        int width = Math.abs(minCol) + Math.abs(maxCol) + 1;
-        int height = Math.abs(minRow) + Math.abs(maxRow) + 1;
 
-        return String.valueOf(width) + " " + String.valueOf(height);
-
-
+        return new Tuple<>(Math.abs(minRow), Math.abs(minCol));
     }
-    public static String parseFirstLine(String firstLine) {
+
+
+    public static List<Integer> parseFirstLine(String firstLine) {
         // TODO: Handle first line
-        return firstLine;
+//        return firstLine;
 
 //        return Integer.parseInt(firstLine);
 
 //        List<Integer> numbers: firstLine splitted by " "
-//        return Arrays
-//                .stream(firstLine.split(" "))
-//                .map(Integer::parseInt)
-//                .collect(Collectors.toList());
+        return Arrays
+                .stream(firstLine.split(" "))
+                .map(Integer::parseInt)
+                .collect(Collectors.toList());
 
 //        List<String> stringParts: firstLine splitted by " "
 //        return Arrays
 //                .stream(firstLine.split(" "))
 //                .collect(Collectors.toList());
+    }
+
+    public static int countOccOfCharacterInMap(char[][] map, char target) {
+        int counter = 0;
+        for (int row = 0; row < map.length; row++) {
+            for (int col = 0; col < map[row].length; col++) {
+                if (map[row][col] == target) {
+                    counter++;
+                }
+            }
+        }
+        return counter;
     }
 
     public static Tuple<Integer, Integer> findFirstPositionOfCharacterInMap(Character[][] map, Character target) {
